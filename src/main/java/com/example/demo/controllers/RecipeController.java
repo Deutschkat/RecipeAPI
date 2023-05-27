@@ -20,7 +20,8 @@ public class RecipeController {
     @PostMapping
     public ResponseEntity<?> createNewRecipe(@RequestBody Recipe recipe) {
         try {
-            Recipe insertedRecipe = recipeService.createNewRecipe(recipe);
+            String username = recipe.getUsername();
+            Recipe insertedRecipe = recipeService.createNewRecipe(recipe, username);
             return ResponseEntity.created(insertedRecipe.getLocationURI()).body(insertedRecipe);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -50,6 +51,40 @@ public class RecipeController {
     public ResponseEntity<?> getRecipesByName(@PathVariable("name") String name) {
         try {
             List<Recipe> matchingRecipes = recipeService.getRecipesByName(name);
+            return ResponseEntity.ok(matchingRecipes);
+        } catch (NoSuchRecipeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    //Gets recipes by a minimum rating of what the user provides.
+    @GetMapping("/rating/{minRating}")
+    public ResponseEntity<?> getRecipesByMinAvgRating(@PathVariable("minRating") double minRating){
+        try{
+            List<Recipe> recipes = recipeService.getRecipesByMinAvgRating(minRating);
+            return ResponseEntity.ok(recipes);
+        }catch (Exception ex){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ex.getMessage());
+
+        }
+    }
+
+    //Search by username
+
+    @GetMapping("/user/{username}")
+    public ResponseEntity<?> getRecipesByUsername(@PathVariable("username") String username) {
+        try {
+            List<Recipe> userRecipes = recipeService.getRecipesByUsername(username);
+            return ResponseEntity.ok(userRecipes);
+        } catch (NoSuchRecipeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/search/{name}/{maxRating}")
+    public ResponseEntity<?> getRecipesByNameAndMaxDifficultyRating(@PathVariable("name") String name, @PathVariable("maxRating") Integer maxRating) {
+        try {
+            List<Recipe> matchingRecipes = recipeService.getRecipesByNameAndMaxDifficultyRating(name, maxRating);
             return ResponseEntity.ok(matchingRecipes);
         } catch (NoSuchRecipeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());

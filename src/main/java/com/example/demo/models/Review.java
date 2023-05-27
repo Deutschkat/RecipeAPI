@@ -22,7 +22,7 @@ public class Review {
     @NotNull
     private String username;
 
-    private int rating;
+    private Integer rating;
 
     @NotNull
     private String description;

@@ -52,8 +52,22 @@ public class ReviewService {
     }
 
     public Recipe postNewReview(Review review, Long recipeId) throws NoSuchRecipeException {
+
+        if (review.getRating() == null || review.getRating() <= 0) {
+            throw new IllegalStateException("You must rate this review above a zero!");
+        }
+
         Recipe recipe = recipeService.getRecipeById(recipeId);
+
+
+
+        if (recipe.getUsername().equals(review.getUsername())) {
+            throw new IllegalStateException("Trying to boost your average review ratings, eh? ;) We see you!");
+        }
+
+
         recipe.getReviews().add(review);
+        recipe.setAverageRating(recipe.getAverageRating());
         recipeService.updateRecipe(recipe, false);
         return recipe;
     }
@@ -78,4 +92,5 @@ public class ReviewService {
         reviewRepo.save(reviewToUpdate);
         return reviewToUpdate;
     }
+
 }

@@ -6,6 +6,7 @@ import com.example.demo.NoSuchRecipeException;
 import com.example.demo.NoSuchReviewException;
 import com.example.demo.services.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,10 +52,12 @@ public class ReviewController {
     @PostMapping("/{recipeId}")
     public ResponseEntity<?> postNewReview(@RequestBody Review review, @PathVariable("recipeId") Long recipeId) {
         try {
-            Recipe insertedRecipe = reviewService.postNewReview(review, recipeId);
-            return ResponseEntity.created(insertedRecipe.getLocationURI()).body(insertedRecipe);
+            Recipe updatedRecipe = reviewService.postNewReview(review, recipeId);
+            return ResponseEntity.ok(updatedRecipe);
         } catch (NoSuchRecipeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
 

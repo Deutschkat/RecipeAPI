@@ -31,6 +31,10 @@ public class Recipe {
     @Column(nullable = false)
     private Integer difficultyRating;
 
+    //added username
+    @Column(nullable = false)
+    private String username;
+
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
     private Collection<Ingredient> ingredients = new ArrayList<>();
@@ -46,6 +50,7 @@ public class Recipe {
     @Transient
     @JsonIgnore
     private URI locationURI;
+    private Double averageRating;
 
     public void setDifficultyRating(int difficultyRating) {
         if (difficultyRating < 0 || difficultyRating > 10) {
@@ -72,5 +77,18 @@ public class Recipe {
         } catch (URISyntaxException e) {
             //Exception should stop here.
         }
+    }
+
+    public Double getAverageRating() {
+        if (reviews != null && !reviews.isEmpty()) {
+            double sum = 0;
+            for (Review review : reviews) {
+                sum += review.getRating();
+            }
+            return sum / reviews.size();
+        } else {
+            return 0.0;
+        }
+
     }
 }

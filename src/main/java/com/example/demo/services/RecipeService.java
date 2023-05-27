@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import javax.transaction.Transactional;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class RecipeService {
@@ -17,8 +18,9 @@ public class RecipeService {
     RecipeRepo recipeRepo;
 
     @Transactional
-    public Recipe createNewRecipe(Recipe recipe) throws IllegalStateException {
+    public Recipe createNewRecipe(Recipe recipe, String username) throws IllegalStateException {
         recipe.validate();
+        recipe.setUsername(username);
         recipe = recipeRepo.save(recipe);
         recipe.generateLocationURI();
         return recipe;
@@ -81,4 +83,36 @@ public class RecipeService {
                     " Double check that it is correct. Or maybe you meant to POST a recipe not PATCH one.");
         }
     }
+
+// Part # 3 - find by name and difficulty
+    public List<Recipe> getRecipesByNameAndMaxDifficultyRating(String name, Integer maxDifficultyRating) throws NoSuchRecipeException{
+        List<Recipe> matchingRecipes = recipeRepo.findByNameContainingIgnoreCaseAndDifficultyRatingLessThanEqual(name, maxDifficultyRating);
+
+        if (matchingRecipes.isEmpty()) {
+            throw new NoSuchRecipeException("No recipes could be found with that name and maximum difficulty rating.");
+        }
+
+        return matchingRecipes;
+    }
+
+
+    public List<Recipe> getRecipesByMinAvgRating(double minAvgRating){
+        List<Recipe> allRecipes = recipeRepo.findAll();
+
+        return allRecipes.stream()
+                .filter(recipe -> recipe.getAverageRating() >= minAvgRating)
+                .collect(Collectors.toList());
+
+    }
+
+    public List<Recipe> getRecipesByUsername(String username) throws NoSuchRecipeException {
+        List<Recipe> userRecipes = recipeRepo.findByUsername(username);
+
+        if (userRecipes.isEmpty()) {
+            throw new NoSuchRecipeException("No recipes could be found for the username: " + username);
+        }
+
+        return userRecipes;
+    }
+
 }
