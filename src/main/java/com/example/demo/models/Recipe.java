@@ -14,12 +14,12 @@ import java.util.Collection;
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class Recipe {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(generator = "recipe_generator")
     private Long id;
 
     @Column(nullable = false)
@@ -31,38 +31,52 @@ public class Recipe {
     @Column(nullable = false)
     private Integer difficultyRating;
 
-    //added username
-    @Column(nullable = false)
-    private String username;
-
+    @Builder.Default
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(
+            name = "recipeId",
+            nullable = false,
+            foreignKey = @ForeignKey
+
+    )
     private Collection<Ingredient> ingredients = new ArrayList<>();
 
+
+    @Builder.Default
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(
+            name = "recipeId",
+            nullable = false,
+            foreignKey = @ForeignKey
+    )
     private Collection<Step> steps = new ArrayList<>();
 
     @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "recipeId", nullable = false, foreignKey = @ForeignKey)
+    @JoinColumn(
+            name = "recipeId",
+            nullable = false,
+            foreignKey = @ForeignKey
+    )
     private Collection<Review> reviews;
 
     @Transient
     @JsonIgnore
     private URI locationURI;
-    private Double averageRating;
 
     public void setDifficultyRating(int difficultyRating) {
-        if (difficultyRating < 0 || difficultyRating > 10) {
-            throw new IllegalStateException("Difficulty rating must be between 0 and 10.");
+
+        if(difficultyRating < 0 || difficultyRating > 10) {
+            throw new IllegalStateException("difficulty rating must be between 0 and 10");
         }
+
         this.difficultyRating = difficultyRating;
     }
 
+    @PrePersist
     public void validate() throws IllegalStateException {
-        if (ingredients.size() == 0) {
-            throw new IllegalStateException("You have to have at least one ingredient for your recipe!");
-        } else if (steps.size() == 0) {
+        if(ingredients.size() == 0) {
+            throw new IllegalStateException("You have to have at least one ingredient for you recipe!");
+        }else if(steps.size() == 0) {
             throw new IllegalStateException("You have to include at least one step for your recipe!");
         }
     }
@@ -74,21 +88,8 @@ public class Recipe {
                             .path("/recipes/")
                             .path(String.valueOf(id))
                             .toUriString());
-        } catch (URISyntaxException e) {
-            //Exception should stop here.
+        }catch (URISyntaxException e) {
+            //this should be checked in testing. Exception should stop here
         }
-    }
-
-    public Double getAverageRating() {
-        if (reviews != null && !reviews.isEmpty()) {
-            double sum = 0;
-            for (Review review : reviews) {
-                sum += review.getRating();
-            }
-            return sum / reviews.size();
-        } else {
-            return 0.0;
-        }
-
     }
 }

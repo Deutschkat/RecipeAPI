@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -18,9 +19,8 @@ public class RecipeService {
     RecipeRepo recipeRepo;
 
     @Transactional
-    public Recipe createNewRecipe(Recipe recipe, String username) throws IllegalStateException {
+    public Recipe createNewRecipe(Recipe recipe) throws IllegalStateException {
         recipe.validate();
-        recipe.setUsername(username);
         recipe = recipeRepo.save(recipe);
         recipe.generateLocationURI();
         return recipe;
@@ -29,8 +29,8 @@ public class RecipeService {
     public Recipe getRecipeById(Long id) throws NoSuchRecipeException {
         Optional<Recipe> recipeOptional = recipeRepo.findById(id);
 
-        if (recipeOptional.isEmpty()) {
-            throw new NoSuchRecipeException("No recipe with ID " + id + " could be found.");
+        if(recipeOptional.isEmpty()) {
+            throw new NoSuchRecipeException("No recipe with ID " + id + " could be found");
         }
 
         Recipe recipe = recipeOptional.get();
@@ -38,22 +38,27 @@ public class RecipeService {
         return recipe;
     }
 
-    public List<Recipe> getRecipesByName(String name) throws NoSuchRecipeException {
-        List<Recipe> matchingRecipes = recipeRepo.findByNameContainingIgnoreCase(name);
+    public ArrayList<Recipe> getRecipesByName(String name) throws NoSuchRecipeException {
+        ArrayList<Recipe> matchingRecipes = recipeRepo.findByNameContaining(name);
 
-        if (matchingRecipes.isEmpty()) {
+        if(matchingRecipes.isEmpty()) {
             throw new NoSuchRecipeException("No recipes could be found with that name.");
+        }
+
+        for(Recipe r: matchingRecipes) {
+            r.generateLocationURI();
         }
 
         return matchingRecipes;
     }
 
-    public List<Recipe> getAllRecipes() throws NoSuchRecipeException {
-        List<Recipe> recipes = recipeRepo.findAll();
+    public ArrayList<Recipe> getAllRecipes() throws NoSuchRecipeException {
+        ArrayList<Recipe> recipes = new ArrayList<>(recipeRepo.findAll());
 
-        if (recipes.isEmpty()) {
+        if(recipes.isEmpty()) {
             throw new NoSuchRecipeException("There are no recipes yet :( feel free to add one though");
         }
+
         return recipes;
     }
 
@@ -63,56 +68,28 @@ public class RecipeService {
             Recipe recipe = getRecipeById(id);
             recipeRepo.deleteById(id);
             return recipe;
-        } catch (NoSuchRecipeException e) {
-            throw new NoSuchRecipeException(e.getMessage() + " Could not delete.");
+        }catch (NoSuchRecipeException e) {
+            throw new NoSuchRecipeException(e.getMessage() + ". Could not delete.");
         }
     }
 
     @Transactional
     public Recipe updateRecipe(Recipe recipe, boolean forceIdCheck) throws NoSuchRecipeException {
         try {
-            if (forceIdCheck) {
+
+            if(forceIdCheck) {
                 getRecipeById(recipe.getId());
             }
+
             recipe.validate();
             Recipe savedRecipe = recipeRepo.save(recipe);
             savedRecipe.generateLocationURI();
             return savedRecipe;
-        } catch (NoSuchRecipeException e) {
+        }catch (NoSuchRecipeException e) {
             throw new NoSuchRecipeException("The recipe you passed in did not have an ID found in the database." +
-                    " Double check that it is correct. Or maybe you meant to POST a recipe not PATCH one.");
+                    " Double check that it is correct. Or maybe you meant to POST a recipe not PATCH one");
         }
-    }
-
-// Part # 3 - find by name and difficulty
-    public List<Recipe> getRecipesByNameAndMaxDifficultyRating(String name, Integer maxDifficultyRating) throws NoSuchRecipeException{
-        List<Recipe> matchingRecipes = recipeRepo.findByNameContainingIgnoreCaseAndDifficultyRatingLessThanEqual(name, maxDifficultyRating);
-
-        if (matchingRecipes.isEmpty()) {
-            throw new NoSuchRecipeException("No recipes could be found with that name and maximum difficulty rating.");
-        }
-
-        return matchingRecipes;
-    }
-
-
-    public List<Recipe> getRecipesByMinAvgRating(double minAvgRating){
-        List<Recipe> allRecipes = recipeRepo.findAll();
-
-        return allRecipes.stream()
-                .filter(recipe -> recipe.getAverageRating() >= minAvgRating)
-                .collect(Collectors.toList());
-
-    }
-
-    public List<Recipe> getRecipesByUsername(String username) throws NoSuchRecipeException {
-        List<Recipe> userRecipes = recipeRepo.findByUsername(username);
-
-        if (userRecipes.isEmpty()) {
-            throw new NoSuchRecipeException("No recipes could be found for the username: " + username);
-        }
-
-        return userRecipes;
     }
 
 }
+

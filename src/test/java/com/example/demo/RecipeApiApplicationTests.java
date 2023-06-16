@@ -5,6 +5,8 @@ import com.example.demo.models.Recipe;
 import com.example.demo.models.Review;
 import com.example.demo.models.Step;
 import com.example.demo.repos.RecipeRepo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -20,6 +22,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Set;
 
@@ -27,16 +30,17 @@ import static net.bytebuddy.matcher.ElementMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 ;
 
 @SpringBootTest(classes = RecipeMain.class, webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles(profiles = "test")
 @AutoConfigureMockMvc
+@ActiveProfiles(profiles = "test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class RecipeApiApplicationTests {
+public class RecipeApiApplicationTests {
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,56 +68,46 @@ class RecipeApiApplicationTests {
                 .andExpect(jsonPath("minutesToMake").value(2))
                 .andExpect(jsonPath("reviews", hasSize(1)))
                 .andExpect(jsonPath("ingredients", hasSize(1)))
-                .andExpect(jsonPath("steps", hasSize(2)))
-                .andExpect(jsonPath("username").value("bob"));
+                .andExpect(jsonPath("steps", hasSize(2)));
     }
 
     @Test
     @Order(2)
     public void testGetRecipeByIdFailureBehavior() throws Exception {
-        final long recipeId = 50;
-
+        final long recipeId = 5000;
         //set up guaranteed to fail in testing environment request
         mockMvc.perform(get("/recipes/" + recipeId))
-
                 //print response
                 .andDo(print())
                 //expect status 404 NOT FOUND
                 .andExpect(status().isNotFound())
                 //confirm that HTTP body contains correct error message
-                .andExpect(content().string(containsString("No recipe with ID " + recipeId + " could be found.")));
+                .andExpect(content().string(containsString("No recipe with ID " + recipeId + " could be found")));
     }
 
     @Test
     @Order(3)
     public void testGetAllRecipesSuccessBehavior() throws Exception {
-        //set up get request for all recipe endpoint
-        mockMvc.perform(get("/recipes"))
 
+        //set up get request for all recipe endpoint
+        this.mockMvc.perform(get("/recipes"))
+                .andDo(print())
                 //expect status is 200 OK
                 .andExpect(status().isOk())
-
                 //expect it will be returned as JSON
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-
                 //expect there are 4 entries
                 .andExpect(jsonPath("$", hasSize(4)))
-
                 //expect the first entry to have ID 1
                 .andExpect(jsonPath("$[0].id").value(1))
-
                 //expect the first entry to have name test recipe
                 .andExpect(jsonPath("$[0].name").value("test recipe"))
-
                 //expect the second entry to have id 2
                 .andExpect(jsonPath("$[1].id").value(2))
-
                 //expect the second entry to have a minutesToMake value of 2
                 .andExpect(jsonPath("$[1].minutesToMake").value(2))
-
                 //expect the third entry to have id 3
                 .andExpect(jsonPath("$[2].id").value(3))
-
                 //expect the third entry to have difficulty rating
                 .andExpect(jsonPath("$[2].difficultyRating").value(5));
     }
@@ -134,11 +128,10 @@ class RecipeApiApplicationTests {
                 .ingredients(Set.of(ingredient))
                 .steps(Set.of(step1, step2))
                 .reviews(Set.of(review))
-                .username("Dave")
                 .build();
 
         MockHttpServletResponse response =
-                mockMvc.perform(post("/recipes")
+                this.mockMvc.perform(post("/recipes")
                                 //set request Content-Type header
                                 .contentType("application/json")
                                 //set HTTP body equal to JSON based on recipe object
@@ -178,7 +171,7 @@ class RecipeApiApplicationTests {
         Recipe recipe = new Recipe();
 
         //force failure with empty User object
-        mockMvc.perform(
+        this.mockMvc.perform(
                         post("/recipes")
                                 //set body equal to empty recipe object
                                 .content(TestUtil.convertObjectToJsonBytes(recipe))
@@ -196,59 +189,47 @@ class RecipeApiApplicationTests {
     public void testGetRecipesByNameSuccessBehavior() throws Exception {
 
         //set up get request to search for recipes with names including the word recipe
-        MvcResult mvcResult = mockMvc.perform(get("/recipes/search/recipe"))
+        mockMvc.perform(get("/recipes/search/recipe"))
                 //expect 200 OK
                 .andExpect(status().isOk())
                 //expect JSON in return
                 .andExpect(content().contentType("application/json"))
-                //return the MvcResult
-                .andReturn();
+                //confirm 3 recipes were returned
+                .andExpect(jsonPath("$", hasSize(3)))
+                //confirm none of the recipes are null
+                .andExpect(jsonPath("$[0]").isNotEmpty())
+                .andExpect(jsonPath("$[1]").isNotEmpty())
+                .andExpect(jsonPath("$[2]").isNotEmpty())
+                //confirm they all have IDs
+                .andExpect(jsonPath("$[0].id").isNumber())
+                .andExpect(jsonPath("$[1].id").isNumber())
+                .andExpect(jsonPath("$[2].id").isNumber())
+                //confirm they all have "recipe" in their name
+                .andExpect(jsonPath("$[0].name", containsString("recipe")))
+                .andExpect(jsonPath("$[1].name", containsString("recipe")))
+                .andExpect(jsonPath("$[2].name", containsString("recipe")));
 
-        //pull json byte array from the result
-        byte[] jsonByteArray = mvcResult.getResponse().getContentAsByteArray();
-        //convert the json bytes to an array of Recipe objects
-        Recipe[] returnedRecipes = TestUtil.convertJsonBytesToObject(jsonByteArray, Recipe[].class);
-
-        //confirm 3 recipes were returned
-        assertThat(returnedRecipes.length, Matchers.is(3));
-
-
-        for (Recipe r : returnedRecipes) {
-            //confirm none of the recipes are null
-            assertThat(r, notNullValue());
-            //confirm they all have IDs
-            assertThat(r.getId(), notNullValue());
-            //confirm they all contain recipe in the name
-            assertThat(r.getName(), containsString("recipe"));
-        }
 
         //set up get request to search for recipes with names containing potato
-        byte[] jsonBytes = mockMvc.perform(get("/recipes/search/potato"))
+        mockMvc.perform(get("/recipes/search/potato"))
                 //expect 200 OK
                 .andExpect(status().isOk())
                 //expect json
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON_VALUE))
-                //return response byte array
-                .andReturn().getResponse().getContentAsByteArray();
-
-        //get recipes as a java array
-        returnedRecipes = TestUtil.convertJsonBytesToObject(jsonBytes, Recipe[].class);
-
-        //confirm only one recipe was returned
-        assertThat(returnedRecipes.length, Matchers.is(1));
-
-        //make sure the recipe isn't null
-        assertThat(returnedRecipes[0], notNullValue());
-
-        //expect that the name should contain potato
-        assertThat(returnedRecipes[0].getName(), containsString("potato"));
+                //confirm only one recipe was returned
+                .andExpect(jsonPath("$", hasSize(1)))
+                //confirm the recipe is not null
+                .andExpect(jsonPath("$[0]").isNotEmpty())
+                //confirm the name contains potato
+                .andExpect(jsonPath("$[0].name", containsString("potato")));
     }
+
 
     @Test
     @Order(7)
     public void testGetRecipeByNameFailureBehavior() throws Exception {
 
-        byte[] contentAsByteArray = mockMvc.perform(get("/recipes/search/should not exist"))
+        byte[] contentAsByteArray = this.mockMvc.perform(get("/recipes/search/should not exist"))
                 //expect 404 NOT FOUND
                 .andExpect(status().isNotFound())
                 //expect only a String in the body
@@ -265,6 +246,42 @@ class RecipeApiApplicationTests {
 
     @Test
     @Order(8)
+    public void testUpdateRecipeSuccessBehavior() throws Exception {
+        MockHttpServletResponse response = this.mockMvc.perform(get("/recipes/2"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse();
+
+        ObjectReader reader = new ObjectMapper().readerFor(Recipe.class);
+        Recipe recipeToUpdate = reader.readValue(response.getContentAsByteArray());
+
+        recipeToUpdate.getReviews().add(Review.builder().description("Was pretty good. A lil spicy though").username("ben").rating(5).build());
+        recipeToUpdate.getSteps().add(Step.builder().stepNumber(1).description("put tabasco on plate").build());
+        recipeToUpdate.getSteps().add(Step.builder().stepNumber(2).description("lick plate").build());
+
+        recipeToUpdate.getIngredients().add(Ingredient.builder().name("Tabasco").amount("5 tbs").build());
+
+        recipeToUpdate.setName("a spicy dish");
+        recipeToUpdate.setMinutesToMake(1);
+        recipeToUpdate.setDifficultyRating(1);
+
+        mockMvc.perform(patch("/recipes")
+                        .content(TestUtil.convertObjectToJsonBytes(recipeToUpdate))
+                        .contentType("application/json"))
+                .andExpect(status().isOk())
+                //expect there to be a body
+                .andExpect(jsonPath("$").isNotEmpty())
+                //expect there to be 3 steps (1 original + 2 added)
+                .andExpect(jsonPath("$.steps", hasSize(3)))
+                //and expect 2 ingredients
+                .andExpect(jsonPath("$.ingredients", hasSize(2)))
+                //and expect minutesToMake = 1
+                .andExpect(jsonPath("$.minutesToMake").value(1))
+                //and expect difficulty rating = 1
+                .andExpect(jsonPath("$.difficultyRating").value(1));
+    }
+
+    @Test
+    @Order(9)
     public void testDeleteRecipeByIdSuccessBehavior() throws Exception {
         final long recipeId = 3;
         //get the recipe with ID 3 for future error message confirmation
@@ -272,49 +289,49 @@ class RecipeApiApplicationTests {
                 .andExpect(status().isOk())
                 //confirm correct recipe was returned
                 .andExpect(jsonPath("id").value(recipeId))
+                //get JSON byte[] array from response
                 .andReturn().getResponse().getContentAsByteArray();
 
+        //use TestUtil class to translate JSON byte[] array into Recipe obj
         Recipe recipe3 = TestUtil.convertJsonBytesToObject(responseByteArr, Recipe.class);
 
         //set up delete request
-        byte[] deleteResponseByteArr = mockMvc.perform(delete("/recipes/" + recipeId))
+        mockMvc.perform(delete("/recipes/" + recipeId))
                 //confirm 200 OK was returned
                 .andExpect(status().isOk())
                 //confirm a String was returned
                 .andExpect(content().contentType(MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8"))
-                .andReturn().getResponse().getContentAsByteArray();
-
-        //pull delete message from byte[]
-        String returnedDeleteConfirmationMessage = new String(deleteResponseByteArr);
-
-        //confirm the message is as expected using the previously acquired Recipe object
-        assertThat(returnedDeleteConfirmationMessage, Matchers.is("The recipe with ID " + recipe3.getId() + " and name " + recipe3.getName() + " was deleted."));
+                //expect the body is
+                .andExpect(jsonPath("$")
+                        .value("The recipe with ID "  + recipe3.getId() + " and name " + recipe3.getName() + " was deleted"));
     }
 
     @Test
-    @Order(9)
+    @Order(10)
     public void testDeleteRecipeByIdFailureBehavior() throws Exception {
         //force error with invalid ID
-        mockMvc.perform(delete("/recipes/-1"))
+        this.mockMvc.perform(delete("/recipes/-1"))
                 //expect 400 BAD REQUEST
                 .andExpect(status().isBadRequest())
                 //expect plain text aka a String
                 .andExpect(content().contentType(MediaType.TEXT_PLAIN_VALUE + ";charset=UTF-8"))
                 //confirm correct error message
-                .andExpect(content().string(Matchers.is("No recipe with ID -1 could be found. Could not delete.")));
+                .andExpect(jsonPath("$").value("No recipe with ID -1 could be found. Could not delete."));
     }
-
 
     @Test
     @Order(11)
-        // Make sure this test runs last
-    void testGetAllRecipesFailureBehavior() throws Exception {
-        // Delete all entries to force an error
-        recipeRepo.deleteAll();
+    public void testGetAllRecipesFailureBehavior() throws Exception {
 
-        // Perform GET all recipes
-        mockMvc.perform(get("/recipes"))
+        //delete all entries to force error
+        recipeRepo.deleteAll();
+        //perform GET all recipes
+        this.mockMvc.perform(get("/recipes"))
+                .andDo(print())
+                //expect 404 NOT FOUND
                 .andExpect(status().isNotFound())
+                //expect error message defined in RecipeService class
                 .andExpect(jsonPath("$").value("There are no recipes yet :( feel free to add one though"));
+
     }
 }
