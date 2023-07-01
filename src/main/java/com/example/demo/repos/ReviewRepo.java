@@ -9,4 +9,6 @@ import java.util.List;
 public interface ReviewRepo extends JpaRepository<Review, Long> {
 
     ArrayList<Review> findByUsername(String username);
+
+
 }

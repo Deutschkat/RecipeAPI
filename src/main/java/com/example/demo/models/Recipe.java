@@ -31,6 +31,16 @@ public class Recipe {
     @Column(nullable = false)
     private Integer difficultyRating;
 
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id")
+    @JsonIgnore
+    private CustomUserDetails user;
+
+    public String getAuthor() {
+        return user.getUsername();
+    }
+
     @Builder.Default
     @OneToMany(cascade = CascadeType.ALL)
     @JoinColumn(
@@ -58,6 +68,7 @@ public class Recipe {
             foreignKey = @ForeignKey
     )
     private Collection<Review> reviews;
+
 
     @Transient
     @JsonIgnore

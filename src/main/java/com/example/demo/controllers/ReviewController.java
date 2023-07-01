@@ -1,5 +1,6 @@
 package com.example.demo.controllers;
 
+import com.example.demo.models.CustomUserDetails;
 import com.example.demo.models.Recipe;
 import com.example.demo.models.Review;
 import com.example.demo.NoSuchRecipeException;
@@ -8,6 +9,8 @@ import com.example.demo.services.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -50,8 +53,11 @@ public class ReviewController {
     }
 
     @PostMapping("/{recipeId}")
-    public ResponseEntity<?> postNewReview(@RequestBody Review review, @PathVariable("recipeId") Long recipeId) {
+    public ResponseEntity<?> postNewReview(@RequestBody Review review,
+                                           @PathVariable("recipeId") Long recipeId, Authentication authentication) {
         try {
+            CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
+            review.setUser(user);
             Recipe updatedRecipe = reviewService.postNewReview(review, recipeId);
             return ResponseEntity.ok(updatedRecipe);
         } catch (NoSuchRecipeException e) {
@@ -62,6 +68,7 @@ public class ReviewController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasPermission(#id, 'Review', 'delete')")
     public ResponseEntity<?> deleteReviewById(@PathVariable("id") Long id) {
         try {
             Review review = reviewService.deleteReviewById(id);
@@ -72,6 +79,7 @@ public class ReviewController {
     }
 
     @PatchMapping
+    @PreAuthorize("hasPermission(#reviewToUpdate.id, 'Review', 'edit')")
     public ResponseEntity<?> updateReviewById(@RequestBody Review reviewToUpdate) {
         try {
             Review review = reviewService.updateReviewById(reviewToUpdate);
