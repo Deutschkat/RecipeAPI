@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import com.example.demo.services.CustomUserDetails;
 import javax.persistence.*;
 import java.net.URI;
 import java.net.URISyntaxException;

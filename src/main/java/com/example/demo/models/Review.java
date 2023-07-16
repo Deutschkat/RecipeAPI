@@ -3,6 +3,7 @@ package com.example.demo.models;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
 
+import com.example.demo.services.CustomUserDetails;
 import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 

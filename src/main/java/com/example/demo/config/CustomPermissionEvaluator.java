@@ -1,6 +1,6 @@
 package com.example.demo.config;
 
-import com.example.demo.models.CustomUserDetails;
+import com.example.demo.services.CustomUserDetails;
 import com.example.demo.models.Recipe;
 import com.example.demo.models.Review;
 import com.example.demo.models.Role;

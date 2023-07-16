@@ -1,10 +1,8 @@
 package com.example.demo.services;
 
-import com.example.demo.models.CustomUserDetails;
 import com.example.demo.models.Recipe;
 import com.example.demo.models.Review;
 import com.example.demo.models.Role;
-import com.example.demo.repos.UserRepo;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -14,11 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.persistence.CascadeType;
 import javax.persistence.EntityNotFoundException;
-import javax.persistence.OneToMany;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -29,6 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Autowired
     PasswordEncoder encoder;
+
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
@@ -87,10 +83,4 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new IllegalStateException("Password is too short. Must be longer than 6 characters");
         }
     }
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Recipe> recipes;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Review> reviews;
 }

@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.exceptions.NoSuchRecipeException;
 import com.example.demo.models.Ingredient;
 import com.example.demo.models.Recipe;
 import com.example.demo.models.Step;

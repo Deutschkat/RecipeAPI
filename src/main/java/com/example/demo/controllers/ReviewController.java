@@ -1,26 +1,34 @@
 package com.example.demo.controllers;
 
-import com.example.demo.models.CustomUserDetails;
 import com.example.demo.models.Recipe;
 import com.example.demo.models.Review;
-import com.example.demo.NoSuchRecipeException;
-import com.example.demo.NoSuchReviewException;
+import com.example.demo.exceptions.NoSuchRecipeException;
+import com.example.demo.exceptions.NoSuchReviewException;
 import com.example.demo.services.ReviewService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping("/review")
+@RequestMapping("/reviews")
 public class ReviewController {
 
     @Autowired
     ReviewService reviewService;
+
+    @GetMapping()
+    public ResponseEntity<?> getAllReviews() {
+        try {
+            List<Review> retrievedReviews = reviewService.getAllReviews();
+            return ResponseEntity.ok(retrievedReviews);
+        } catch (IllegalStateException | NoSuchReviewException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getReviewById(@PathVariable("id") Long id) {
@@ -35,7 +43,7 @@ public class ReviewController {
     @GetMapping("/recipe/{recipeId}")
     public ResponseEntity<?> getReviewByRecipeId(@PathVariable("recipeId") Long recipeId) {
         try {
-            List<Review> reviews = reviewService.getReviewByRecipeId(recipeId);
+            ArrayList<Review> reviews = reviewService.getReviewByRecipeId(recipeId);
             return ResponseEntity.ok(reviews);
         } catch (NoSuchRecipeException | NoSuchReviewException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -45,7 +53,7 @@ public class ReviewController {
     @GetMapping("/user/{username}")
     public ResponseEntity<?> getReviewByUsername(@PathVariable("username") String username) {
         try {
-            List<Review> reviews = reviewService.getReviewByUsername(username);
+            ArrayList<Review> reviews = reviewService.getReviewByUsername(username);
             return ResponseEntity.ok(reviews);
         } catch (NoSuchReviewException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -53,17 +61,12 @@ public class ReviewController {
     }
 
     @PostMapping("/{recipeId}")
-    public ResponseEntity<?> postNewReview(@RequestBody Review review,
-                                           @PathVariable("recipeId") Long recipeId, Authentication authentication) {
+    public ResponseEntity<?> postNewReview(@RequestBody Review review, @PathVariable("recipeId") Long recipeId) {
         try {
-            CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
-            review.setUser(user);
-            Recipe updatedRecipe = reviewService.postNewReview(review, recipeId);
-            return ResponseEntity.ok(updatedRecipe);
+            Recipe insertedRecipe = reviewService.postNewReview(review, recipeId);
+            return ResponseEntity.created(insertedRecipe.getLocationURI()).body(insertedRecipe);
         } catch (NoSuchRecipeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 

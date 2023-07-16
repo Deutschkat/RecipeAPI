@@ -1,6 +1,7 @@
-package com.example.demo.models;
+package com.example.demo.services;
 
 import com.example.demo.models.Role;
+import com.example.demo.models.UserMeta;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,13 +10,13 @@ import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.Collection;
 
+
 @Entity
 @Getter
 @Setter
-@Builder
+//@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "user_details")
 public class CustomUserDetails implements UserDetails {
 
     @Id
@@ -26,23 +27,18 @@ public class CustomUserDetails implements UserDetails {
     public String username;
 
     @Column(nullable = false)
-    //make sure that the password is never sent out but can be read when creating a new user
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
-    @Builder.Default
     @Column(nullable = false)
     private boolean isAccountNonExpired = true;
 
-    @Builder.Default
     @Column(nullable = false)
     private boolean isAccountNonLocked = true;
 
-    @Builder.Default
     @Column(nullable = false)
     private boolean isCredentialsNonExpired = true;
 
-    @Builder.Default
     @Column(nullable = false)
     private boolean isEnabled = true;
 
@@ -54,7 +50,10 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-    @JoinColumn(name = "userId", nullable = false)
+    @JoinColumn(
+            name = "userId",
+            nullable = false
+    )
     private Collection<Role> authorities = new ArrayList<>();
 
     @OneToOne(cascade = CascadeType.PERSIST, optional = false)
